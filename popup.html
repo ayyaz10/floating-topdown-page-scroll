@@ -84,25 +84,21 @@
         margin-bottom: 16px;
       }
       .palette-swatch {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 70px;
-        border-radius: 12px;
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
         border: 1px solid rgba(255, 255, 255, 0.15);
         cursor: pointer;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease;
       }
       .palette-swatch:hover {
-        transform: translateY(-2px);
+        transform: scale(1.05);
         box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
       }
       .palette-swatch span {
-        color: white;
-        font-size: 11px;
-        font-weight: 700;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        display: none;
       }
       .button-group {
         display: flex;
@@ -144,24 +140,54 @@
       <div class="setting-group">
         <label>Popular Color Palettes</label>
         <div class="palette-grid">
-          <div class="palette-swatch" data-bg="#3b5998" data-text="#ffffff" data-opacity="85" style="background: rgba(59,89,152,0.85);">
-            <span>Facebook</span>
-          </div>
-          <div class="palette-swatch" data-bg="#ff0000" data-text="#ffffff" data-opacity="90" style="background: rgba(255,0,0,0.9);">
-            <span>YouTube</span>
-          </div>
-          <div class="palette-swatch" data-bg="#1da1f2" data-text="#ffffff" data-opacity="85" style="background: rgba(29,161,242,0.85);">
-            <span>Twitter</span>
-          </div>
-          <div class="palette-swatch" data-bg="#d93025" data-text="#ffffff" data-opacity="85" style="background: rgba(217,48,37,0.85);">
-            <span>Gmail</span>
-          </div>
-          <div class="palette-swatch" data-bg="#242424" data-text="#ffffff" data-opacity="70" style="background: rgba(36,36,36,0.7);">
-            <span>Dark</span>
-          </div>
-          <div class="palette-swatch" data-bg="#ffb900" data-text="#000000" data-opacity="90" style="background: rgba(255,185,0,0.9); color: black;">
-            <span>Spotify</span>
-          </div>
+          <div
+            class="palette-swatch"
+            data-bg="#242424"
+            data-text="#ffffff"
+            data-opacity="70"
+            style="background: rgba(36, 36, 36, 0.7)"
+            title="Dark"
+          ></div>
+          <div
+            class="palette-swatch"
+            data-bg="#ffffff"
+            data-text="#000000"
+            data-opacity="85"
+            style="background: rgba(255, 255, 255, 0.85)"
+            title="Light"
+          ></div>
+          <div
+            class="palette-swatch"
+            data-bg="#e1306c"
+            data-text="#ffffff"
+            data-opacity="90"
+            style="background: rgba(225, 48, 108, 0.9)"
+            title="Instagram"
+          ></div>
+          <div
+            class="palette-swatch"
+            data-bg="#3b5998"
+            data-text="#ffffff"
+            data-opacity="85"
+            style="background: rgba(59, 89, 152, 0.85)"
+            title="Facebook"
+          ></div>
+          <div
+            class="palette-swatch"
+            data-bg="#ff0000"
+            data-text="#ffffff"
+            data-opacity="90"
+            style="background: rgba(255, 0, 0, 0.9)"
+            title="YouTube"
+          ></div>
+          <div
+            class="palette-swatch"
+            data-bg="#1da1f2"
+            data-text="#ffffff"
+            data-opacity="85"
+            style="background: rgba(29, 161, 242, 0.85)"
+            title="Twitter"
+          ></div>
         </div>
       </div>
 

@@ -6,8 +6,8 @@ if (window.__scrollButtonsInjected) {
 
   function initScrollButtons() {
     // Disable browser's automatic scroll restoration
-    if ('scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual';
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
     }
 
     // Scroll position persistence
@@ -16,8 +16,8 @@ if (window.__scrollButtonsInjected) {
     const STORAGE_KEY_COLORS = `button_colors`;
 
     // Default colors
-    const DEFAULT_BG_COLOR = 'rgba(0, 0, 0, 0.7)';
-    const DEFAULT_TEXT_COLOR = 'white';
+    const DEFAULT_BG_COLOR = "rgba(0, 0, 0, 0.7)";
+    const DEFAULT_TEXT_COLOR = "white";
 
     let currentBgColor = DEFAULT_BG_COLOR;
     let currentTextColor = DEFAULT_TEXT_COLOR;
@@ -25,7 +25,7 @@ if (window.__scrollButtonsInjected) {
 
     function getStoredColors() {
       const stored = localStorage.getItem(STORAGE_KEY_COLORS);
-      
+
       if (stored) {
         try {
           const colors = JSON.parse(stored);
@@ -42,7 +42,10 @@ if (window.__scrollButtonsInjected) {
     function saveColors(bgColor, textColor) {
       currentBgColor = bgColor;
       currentTextColor = textColor;
-      localStorage.setItem(STORAGE_KEY_COLORS, JSON.stringify({ bgColor, textColor }));
+      localStorage.setItem(
+        STORAGE_KEY_COLORS,
+        JSON.stringify({ bgColor, textColor }),
+      );
     }
 
     function saveScrollPosition() {
@@ -72,7 +75,7 @@ if (window.__scrollButtonsInjected) {
         left: container.style.left,
         top: container.style.top,
         right: container.style.right,
-        transform: container.style.transform
+        transform: container.style.transform,
       };
       localStorage.setItem(STORAGE_KEY_CONTAINER, JSON.stringify(pos));
     }
@@ -97,30 +100,30 @@ if (window.__scrollButtonsInjected) {
         document.body.scrollHeight,
         document.documentElement.scrollHeight,
         document.body.offsetHeight,
-        document.documentElement.offsetHeight
+        document.documentElement.offsetHeight,
       );
     }
 
     // Restore position on page load
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', restoreScrollPosition);
-      window.addEventListener('load', restoreScrollPosition);
-    } else if (document.readyState === 'interactive') {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", restoreScrollPosition);
+      window.addEventListener("load", restoreScrollPosition);
+    } else if (document.readyState === "interactive") {
       restoreScrollPosition();
-      window.addEventListener('load', restoreScrollPosition);
+      window.addEventListener("load", restoreScrollPosition);
     } else {
       restoreScrollPosition();
     }
 
     // Save position on scroll (debounced)
     let scrollTimeout;
-    window.addEventListener('scroll', () => {
+    window.addEventListener("scroll", () => {
       clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(saveScrollPosition, 300);
     });
 
     // Also save on page unload
-    window.addEventListener('beforeunload', saveScrollPosition);
+    window.addEventListener("beforeunload", saveScrollPosition);
 
     // Get stored colors
     const colors = getStoredColors();
@@ -165,16 +168,19 @@ if (window.__scrollButtonsInjected) {
         transition: all 0.2s ease;
         pointer-events: auto;
       `;
-      
+
       // Prevent click while dragging
       button.addEventListener("click", (e) => {
-        if (!isDragging) {
+        if (!isDragging && !dragMoved) {
           onClick();
+        } else {
+          e.stopImmediatePropagation();
+          e.preventDefault();
         }
       });
-      
+
       button.addEventListener("mouseenter", () => {
-        if (!isDragging) {
+        if (!isDragging && !dragMoved) {
           button.style.transform = "scale(1.1)";
           button.style.opacity = "0.9";
         }
@@ -220,6 +226,9 @@ if (window.__scrollButtonsInjected) {
 
     let dragOffsetX = 0;
     let dragOffsetY = 0;
+    let dragMoved = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
 
     function startDrag(event) {
       if (event.button !== 0) return;
@@ -231,6 +240,9 @@ if (window.__scrollButtonsInjected) {
         container.style.right = "auto";
       }
       isDragging = true;
+      dragMoved = false;
+      dragStartX = event.clientX;
+      dragStartY = event.clientY;
       dragOffsetX = event.clientX - rect.left;
       dragOffsetY = event.clientY - rect.top;
       container.style.cursor = "grabbing";
@@ -239,6 +251,11 @@ if (window.__scrollButtonsInjected) {
 
     function drag(event) {
       if (!isDragging) return;
+      const deltaX = Math.abs(event.clientX - dragStartX);
+      const deltaY = Math.abs(event.clientY - dragStartY);
+      if (deltaX > 5 || deltaY > 5) {
+        dragMoved = true;
+      }
       container.style.left = `${event.clientX - dragOffsetX}px`;
       container.style.top = `${event.clientY - dragOffsetY}px`;
     }
@@ -273,8 +290,8 @@ if (window.__scrollButtonsInjected) {
 
     // Listen for messages from popup
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      if (request.action === 'updateColors') {
-        buttons.forEach(btn => {
+      if (request.action === "updateColors") {
+        buttons.forEach((btn) => {
           btn.style.background = request.bgColor;
           btn.style.color = request.textColor;
         });
@@ -285,8 +302,8 @@ if (window.__scrollButtonsInjected) {
   }
 
   // Wait for DOM to be ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initScrollButtons);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initScrollButtons);
   } else {
     initScrollButtons();
   }
