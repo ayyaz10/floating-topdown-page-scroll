@@ -116,250 +116,298 @@ if (window.__scrollButtonsInjected) {
 
   // Create container
   const container = document.createElement("div");
-container.id = "scroll-buttons-container";
-container.style.cssText = `
-  position: fixed;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: auto;
-  touch-action: none;
-  cursor: grab;
-`;
-
-function createButton(label, onClick) {
-  const button = document.createElement("button");
-  button.innerHTML = label;
-  button.style.cssText = `
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: ${colors.bgColor};
-    color: ${colors.textColor};
-    border: none;
-    cursor: pointer;
-    font-size: 20px;
+  container.id = "scroll-buttons-container";
+  container.style.cssText = `
+    position: fixed;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 9999;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
+    flex-direction: column;
+    gap: 10px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
     pointer-events: auto;
+    touch-action: none;
+    cursor: grab;
   `;
-  button.addEventListener("click", onClick);
-  button.addEventListener("mouseenter", () => {
-    button.style.transform = "scale(1.1)";
-    button.style.opacity = "0.9";
-  });
-  button.addEventListener("mouseleave", () => {
-    button.style.transform = "scale(1)";
-    button.style.opacity = "1";
-  });
-  return button;
-}
 
-// Create up button
-const upButton = createButton("▲", () => {
-  window.scrollTo({ top: 0, behavior: "smooth" });
-});
-
-// Create down button
-const downButton = createButton("▼", () => {
-  const maxHeight = getMaxScrollHeight();
-  window.scrollTo({ top: maxHeight, behavior: "smooth" });
-});
-
-// Create settings button
-const settingsButton = createButton("⚙", () => {
-  settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
-});
-
-// Create settings panel
-const settingsPanel = document.createElement("div");
-settingsPanel.id = "scroll-buttons-settings";
-settingsPanel.style.cssText = `
-  position: absolute;
-  right: 70px;
-  top: 0;
-  background: rgba(20, 20, 20, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  padding: 15px;
-  display: none;
-  z-index: 10000;
-  min-width: 200px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-`;
-
-const bgColorLabel = document.createElement("label");
-bgColorLabel.style.cssText = `
-  display: block;
-  color: white;
-  margin-bottom: 8px;
-  font-size: 12px;
-  font-weight: bold;
-`;
-bgColorLabel.textContent = "Background Color";
-
-const bgColorInput = document.createElement("input");
-bgColorInput.type = "color";
-bgColorInput.value = colors.bgColor.includes('rgba') ? '#000000' : colors.bgColor;
-bgColorInput.style.cssText = `
-  width: 100%;
-  height: 30px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-bottom: 12px;
-`;
-
-const textColorLabel = document.createElement("label");
-textColorLabel.style.cssText = `
-  display: block;
-  color: white;
-  margin-bottom: 8px;
-  font-size: 12px;
-  font-weight: bold;
-`;
-textColorLabel.textContent = "Arrow Color";
-
-const textColorInput = document.createElement("input");
-textColorInput.type = "color";
-textColorInput.value = colors.textColor === 'white' ? '#ffffff' : colors.textColor;
-textColorInput.style.cssText = `
-  width: 100%;
-  height: 30px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-bottom: 12px;
-`;
-
-const resetButton = document.createElement("button");
-resetButton.textContent = "Reset";
-resetButton.style.cssText = `
-  width: 100%;
-  background: rgba(100, 100, 100, 0.8);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.2s ease;
-`;
-resetButton.addEventListener("click", () => {
-  bgColorInput.value = '#000000';
-  textColorInput.value = '#ffffff';
-  updateColors('#000000', '#ffffff');
-});
-resetButton.addEventListener("mouseenter", () => {
-  resetButton.style.background = 'rgba(120, 120, 120, 0.8)';
-});
-resetButton.addEventListener("mouseleave", () => {
-  resetButton.style.background = 'rgba(100, 100, 100, 0.8)';
-});
-
-function updateColors(bgColor, textColor) {
-  const bgRgba = bgColor === '#000000' ? DEFAULT_BG_COLOR : bgColor + 'B3';
-  const buttons = [upButton, downButton, settingsButton];
-  buttons.forEach(btn => {
-    btn.style.background = bgRgba;
-    btn.style.color = textColor;
-  });
-  saveColors(bgRgba, textColor);
-}
-
-bgColorInput.addEventListener("input", (e) => {
-  updateColors(e.target.value, textColorInput.value);
-});
-
-textColorInput.addEventListener("input", (e) => {
-  updateColors(bgColorInput.value, e.target.value);
-});
-
-settingsPanel.appendChild(bgColorLabel);
-settingsPanel.appendChild(bgColorInput);
-settingsPanel.appendChild(textColorLabel);
-settingsPanel.appendChild(textColorInput);
-settingsPanel.appendChild(resetButton);
-
-// Append buttons to container
-container.appendChild(upButton);
-container.appendChild(downButton);
-container.appendChild(settingsButton);
-container.appendChild(settingsPanel);
-
-// Append container to body
-document.body.appendChild(container);
-
-// Restore container position
-restoreContainerPosition(container);
-
-let isDragging = false;
-let dragOffsetX = 0;
-let dragOffsetY = 0;
-
-function startDrag(event) {
-  if (event.button !== 0) return;
-  const rect = container.getBoundingClientRect();
-  if (container.style.transform) {
-    container.style.transform = "none";
-    container.style.left = `${rect.left}px`;
-    container.style.top = `${rect.top}px`;
-    container.style.right = "auto";
+  function createButton(label, onClick) {
+    const button = document.createElement("button");
+    button.innerHTML = label;
+    button.style.cssText = `
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: ${colors.bgColor};
+      color: ${colors.textColor};
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      transition: all 0.2s ease;
+      pointer-events: auto;
+    `;
+    button.addEventListener("click", onClick);
+    button.addEventListener("mouseenter", () => {
+      button.style.transform = "scale(1.1)";
+      button.style.opacity = "0.9";
+    });
+    button.addEventListener("mouseleave", () => {
+      button.style.transform = "scale(1)";
+      button.style.opacity = "1";
+    });
+    return button;
   }
-  isDragging = true;
-  dragOffsetX = event.clientX - rect.left;
-  dragOffsetY = event.clientY - rect.top;
-  container.style.cursor = "grabbing";
-  event.preventDefault();
-}
 
-function drag(event) {
-  if (!isDragging) return;
-  container.style.left = `${event.clientX - dragOffsetX}px`;
-  container.style.top = `${event.clientY - dragOffsetY}px`;
-}
+  // Create up button
+  const upButton = createButton("▲", () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
 
-function stopDrag() {
-  if (!isDragging) return;
-  isDragging = false;
-  container.style.cursor = "grab";
-  saveContainerPosition(container);
-}
+  // Create down button
+  const downButton = createButton("▼", () => {
+    const maxHeight = getMaxScrollHeight();
+    window.scrollTo({ top: maxHeight, behavior: "smooth" });
+  });
 
-container.addEventListener("mousedown", startDrag);
-document.addEventListener("mousemove", drag);
-document.addEventListener("mouseup", stopDrag);
+  // Create settings button
+  const settingsButton = createButton("⚙", () => {
+    settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
+  });
 
-document.addEventListener("mouseleave", stopDrag);
+  // Create settings panel - FIXED TOP-RIGHT
+  const settingsPanel = document.createElement("div");
+  settingsPanel.id = "scroll-buttons-settings";
+  settingsPanel.style.cssText = `
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: rgba(20, 20, 20, 0.98);
+    border: 2px solid rgba(100, 100, 100, 0.8);
+    border-radius: 12px;
+    padding: 20px;
+    display: none;
+    z-index: 10000;
+    min-width: 250px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  `;
 
-// Show/hide based on scroll position
-function updateVisibility() {
-  if (window.scrollY > 100) {
-    container.style.opacity = "1";
-  } else {
-    container.style.opacity = "0";
-  }
-}
+  const panelTitle = document.createElement("div");
+  panelTitle.style.cssText = `
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 15px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 10px;
+  `;
+  panelTitle.textContent = "Color Settings";
 
-// Initial check
-updateVisibility();
+  const bgColorLabel = document.createElement("label");
+  bgColorLabel.style.cssText = `
+    display: block;
+    color: white;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+  `;
+  bgColorLabel.textContent = "Background Color";
 
-// Listen for scroll events
-window.addEventListener("scroll", updateVisibility);
+  const bgColorInput = document.createElement("input");
+  bgColorInput.type = "color";
+  bgColorInput.value = colors.bgColor.includes('rgba') ? '#000000' : colors.bgColor;
+  bgColorInput.style.cssText = `
+    width: 100%;
+    height: 40px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 15px;
+  `;
 
-// Close settings on click outside
-document.addEventListener("click", (e) => {
-  if (!container.contains(e.target)) {
+  const textColorLabel = document.createElement("label");
+  textColorLabel.style.cssText = `
+    display: block;
+    color: white;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+  `;
+  textColorLabel.textContent = "Arrow Color";
+
+  const textColorInput = document.createElement("input");
+  textColorInput.type = "color";
+  textColorInput.value = colors.textColor === 'white' ? '#ffffff' : colors.textColor;
+  textColorInput.style.cssText = `
+    width: 100%;
+    height: 40px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 15px;
+  `;
+
+  const buttonContainer = document.createElement("div");
+  buttonContainer.style.cssText = `
+    display: flex;
+    gap: 10px;
+  `;
+
+  const resetButton = document.createElement("button");
+  resetButton.textContent = "Reset";
+  resetButton.style.cssText = `
+    flex: 1;
+    background: rgba(100, 100, 100, 0.8);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  `;
+  resetButton.addEventListener("click", () => {
+    bgColorInput.value = '#000000';
+    textColorInput.value = '#ffffff';
+    updateColors('#000000', '#ffffff');
+  });
+  resetButton.addEventListener("mouseenter", () => {
+    resetButton.style.background = 'rgba(120, 120, 120, 0.9)';
+  });
+  resetButton.addEventListener("mouseleave", () => {
+    resetButton.style.background = 'rgba(100, 100, 100, 0.8)';
+  });
+
+  const closeButton = document.createElement("button");
+  closeButton.textContent = "Close";
+  closeButton.style.cssText = `
+    flex: 1;
+    background: rgba(70, 70, 70, 0.8);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  `;
+  closeButton.addEventListener("click", () => {
     settingsPanel.style.display = 'none';
+  });
+  closeButton.addEventListener("mouseenter", () => {
+    closeButton.style.background = 'rgba(90, 90, 90, 0.9)';
+  });
+  closeButton.addEventListener("mouseleave", () => {
+    closeButton.style.background = 'rgba(70, 70, 70, 0.8)';
+  });
+
+  function updateColors(bgColor, textColor) {
+    const bgRgba = bgColor === '#000000' ? DEFAULT_BG_COLOR : bgColor + 'B3';
+    const buttons = [upButton, downButton, settingsButton];
+    buttons.forEach(btn => {
+      btn.style.background = bgRgba;
+      btn.style.color = textColor;
+    });
+    saveColors(bgRgba, textColor);
   }
-});
+
+  bgColorInput.addEventListener("input", (e) => {
+    updateColors(e.target.value, textColorInput.value);
+  });
+
+  textColorInput.addEventListener("input", (e) => {
+    updateColors(bgColorInput.value, e.target.value);
+  });
+
+  buttonContainer.appendChild(resetButton);
+  buttonContainer.appendChild(closeButton);
+
+  settingsPanel.appendChild(panelTitle);
+  settingsPanel.appendChild(bgColorLabel);
+  settingsPanel.appendChild(bgColorInput);
+  settingsPanel.appendChild(textColorLabel);
+  settingsPanel.appendChild(textColorInput);
+  settingsPanel.appendChild(buttonContainer);
+
+  // Append buttons to container
+  container.appendChild(upButton);
+  container.appendChild(downButton);
+  container.appendChild(settingsButton);
+
+  // Append container to body
+  document.body.appendChild(container);
+  document.body.appendChild(settingsPanel);
+
+  // Restore container position
+  restoreContainerPosition(container);
+
+  let isDragging = false;
+  let dragOffsetX = 0;
+  let dragOffsetY = 0;
+
+  function startDrag(event) {
+    if (event.button !== 0) return;
+    const rect = container.getBoundingClientRect();
+    if (container.style.transform) {
+      container.style.transform = "none";
+      container.style.left = `${rect.left}px`;
+      container.style.top = `${rect.top}px`;
+      container.style.right = "auto";
+    }
+    isDragging = true;
+    dragOffsetX = event.clientX - rect.left;
+    dragOffsetY = event.clientY - rect.top;
+    container.style.cursor = "grabbing";
+    event.preventDefault();
+  }
+
+  function drag(event) {
+    if (!isDragging) return;
+    container.style.left = `${event.clientX - dragOffsetX}px`;
+    container.style.top = `${event.clientY - dragOffsetY}px`;
+  }
+
+  function stopDrag() {
+    if (!isDragging) return;
+    isDragging = false;
+    container.style.cursor = "grab";
+    saveContainerPosition(container);
+  }
+
+  container.addEventListener("mousedown", startDrag);
+  document.addEventListener("mousemove", drag);
+  document.addEventListener("mouseup", stopDrag);
+
+  document.addEventListener("mouseleave", stopDrag);
+
+  // Show/hide based on scroll position
+  function updateVisibility() {
+    if (window.scrollY > 100) {
+      container.style.opacity = "1";
+    } else {
+      container.style.opacity = "0";
+    }
+  }
+
+  // Initial check
+  updateVisibility();
+
+  // Listen for scroll events
+  window.addEventListener("scroll", updateVisibility);
+
+  // Close settings on click outside
+  document.addEventListener("click", (e) => {
+    if (!container.contains(e.target) && !settingsPanel.contains(e.target)) {
+      settingsPanel.style.display = 'none';
+    }
+  });
 }
