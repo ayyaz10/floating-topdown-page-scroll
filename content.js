@@ -21,6 +21,7 @@ if (window.__scrollButtonsInjected) {
 
     let currentBgColor = DEFAULT_BG_COLOR;
     let currentTextColor = DEFAULT_TEXT_COLOR;
+    let isDragging = false;
 
     function getStoredColors() {
       const stored = localStorage.getItem(STORAGE_KEY_COLORS);
@@ -164,10 +165,19 @@ if (window.__scrollButtonsInjected) {
         transition: all 0.2s ease;
         pointer-events: auto;
       `;
-      button.addEventListener("click", onClick);
+      
+      // Prevent click while dragging
+      button.addEventListener("click", (e) => {
+        if (!isDragging) {
+          onClick();
+        }
+      });
+      
       button.addEventListener("mouseenter", () => {
-        button.style.transform = "scale(1.1)";
-        button.style.opacity = "0.9";
+        if (!isDragging) {
+          button.style.transform = "scale(1.1)";
+          button.style.opacity = "0.9";
+        }
       });
       button.addEventListener("mouseleave", () => {
         button.style.transform = "scale(1)";
@@ -208,7 +218,6 @@ if (window.__scrollButtonsInjected) {
     // Restore container position
     restoreContainerPosition(container);
 
-    let isDragging = false;
     let dragOffsetX = 0;
     let dragOffsetY = 0;
 
