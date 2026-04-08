@@ -61,6 +61,15 @@ if (window.__scrollButtonsInjected) {
     }
   }
 
+  function getMaxScrollHeight() {
+    return Math.max(
+      document.body.scrollHeight,
+      document.documentElement.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.offsetHeight
+    );
+  }
+
   // Restore position on page load
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', restoreScrollPosition);
@@ -152,7 +161,8 @@ downButton.style.cssText = `
   pointer-events: auto;
 `;
 downButton.addEventListener("click", () => {
-  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  const maxHeight = getMaxScrollHeight();
+  window.scrollTo({ top: maxHeight, behavior: "smooth" });
 });
 downButton.addEventListener("mouseenter", () => {
   downButton.style.transform = "scale(1.1)";
