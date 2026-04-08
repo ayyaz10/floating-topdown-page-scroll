@@ -3,7 +3,11 @@
   "name": "Top Bottom Page Scroll",
   "version": "1.0",
   "description": "Floating up and down scroll buttons for all web pages",
-  "permissions": ["storage"],
+  "permissions": ["storage", "tabs"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Scroll Settings"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],

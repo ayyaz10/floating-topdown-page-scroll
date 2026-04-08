@@ -14,16 +14,25 @@ if (window.__scrollButtonsInjected) {
     const STORAGE_KEY_SCROLL = `scroll_pos_${location.pathname}`;
     const STORAGE_KEY_CONTAINER = `container_pos_${location.pathname}`;
     const STORAGE_KEY_COLORS = `button_colors`;
+    const STORAGE_KEY_OPACITY = `button_opacity`;
 
     // Default colors
     const DEFAULT_BG_COLOR = 'rgba(0, 0, 0, 0.7)';
     const DEFAULT_TEXT_COLOR = 'white';
 
+    let currentBgColor = DEFAULT_BG_COLOR;
+    let currentTextColor = DEFAULT_TEXT_COLOR;
+
     function getStoredColors() {
       const stored = localStorage.getItem(STORAGE_KEY_COLORS);
+      const storedOpacity = localStorage.getItem(STORAGE_KEY_OPACITY);
+      
       if (stored) {
         try {
-          return JSON.parse(stored);
+          const colors = JSON.parse(stored);
+          currentBgColor = colors.bgColor;
+          currentTextColor = colors.textColor;
+          return colors;
         } catch (e) {
           return { bgColor: DEFAULT_BG_COLOR, textColor: DEFAULT_TEXT_COLOR };
         }
@@ -32,6 +41,8 @@ if (window.__scrollButtonsInjected) {
     }
 
     function saveColors(bgColor, textColor) {
+      currentBgColor = bgColor;
+      currentTextColor = textColor;
       localStorage.setItem(STORAGE_KEY_COLORS, JSON.stringify({ bgColor, textColor }));
     }
 
@@ -134,6 +145,8 @@ if (window.__scrollButtonsInjected) {
       cursor: grab;
     `;
 
+    const buttons = [];
+
     function createButton(label, onClick) {
       const button = document.createElement("button");
       button.innerHTML = label;
@@ -162,6 +175,7 @@ if (window.__scrollButtonsInjected) {
         button.style.transform = "scale(1)";
         button.style.opacity = "1";
       });
+      buttons.push(button);
       return button;
     }
 
@@ -313,7 +327,6 @@ if (window.__scrollButtonsInjected) {
 
     function updateColors(bgColor, textColor) {
       const bgRgba = bgColor === '#000000' ? DEFAULT_BG_COLOR : bgColor + 'B3';
-      const buttons = [upButton, downButton, settingsButton];
       buttons.forEach(btn => {
         btn.style.background = bgRgba;
         btn.style.color = textColor;
@@ -420,6 +433,18 @@ if (window.__scrollButtonsInjected) {
     document.addEventListener("click", (e) => {
       if (!container.contains(e.target) && !settingsPanel.contains(e.target)) {
         settingsPanel.style.display = 'none';
+      }
+    });
+
+    // Listen for messages from popup
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (request.action === 'updateColors') {
+        buttons.forEach(btn => {
+          btn.style.background = request.bgColor;
+          btn.style.color = request.textColor;
+        });
+        saveColors(request.bgColor, request.textColor);
+        sendResponse({ success: true });
       }
     });
   }
