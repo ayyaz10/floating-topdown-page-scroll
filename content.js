@@ -4,27 +4,70 @@ if (window.__scrollButtonsInjected) {
 } else {
   window.__scrollButtonsInjected = true;
 
+  // Disable browser's automatic scroll restoration
+  if ('scrollRestoration' in window.history) {
+    window.history.scrollRestoration = 'manual';
+  }
+
   // Scroll position persistence
-  const STORAGE_KEY = `scroll_pos_${location.pathname}`;
+  const STORAGE_KEY_SCROLL = `scroll_pos_${location.pathname}`;
+  const STORAGE_KEY_CONTAINER = `container_pos_${location.pathname}`;
 
   function saveScrollPosition() {
     const scrollPos = window.scrollY || window.pageYOffset;
-    localStorage.setItem(STORAGE_KEY, scrollPos.toString());
+    localStorage.setItem(STORAGE_KEY_SCROLL, scrollPos.toString());
   }
 
   function restoreScrollPosition() {
-    const savedPos = localStorage.getItem(STORAGE_KEY);
+    const savedPos = localStorage.getItem(STORAGE_KEY_SCROLL);
     if (savedPos !== null) {
       const targetPos = parseInt(savedPos, 10);
+      // Try multiple times to ensure scroll happens after page fully loads
       setTimeout(() => {
         window.scrollTo(0, targetPos);
-      }, 100);
+      }, 500);
+      setTimeout(() => {
+        window.scrollTo(0, targetPos);
+      }, 1000);
+      setTimeout(() => {
+        window.scrollTo(0, targetPos);
+      }, 2000);
+    }
+  }
+
+  function saveContainerPosition(container) {
+    const rect = container.getBoundingClientRect();
+    const pos = {
+      left: container.style.left,
+      top: container.style.top,
+      right: container.style.right,
+      transform: container.style.transform
+    };
+    localStorage.setItem(STORAGE_KEY_CONTAINER, JSON.stringify(pos));
+  }
+
+  function restoreContainerPosition(container) {
+    const savedPos = localStorage.getItem(STORAGE_KEY_CONTAINER);
+    if (savedPos !== null) {
+      try {
+        const pos = JSON.parse(savedPos);
+        if (pos.left) container.style.left = pos.left;
+        if (pos.top) container.style.top = pos.top;
+        if (pos.right) container.style.right = pos.right;
+        if (pos.transform) container.style.transform = pos.transform;
+      } catch (e) {
+        // ignore parsing errors
+      }
     }
   }
 
   // Restore position on page load
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', restoreScrollPosition);
+    window.addEventListener('load', restoreScrollPosition);
+  } else if (document.readyState === 'interactive') {
+    restoreScrollPosition();
+    window.addEventListener('load', restoreScrollPosition);
   } else {
     restoreScrollPosition();
   }
@@ -33,8 +76,11 @@ if (window.__scrollButtonsInjected) {
   let scrollTimeout;
   window.addEventListener('scroll', () => {
     clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(saveScrollPosition, 500);
+    scrollTimeout = setTimeout(saveScrollPosition, 300);
   });
+
+  // Also save on page unload
+  window.addEventListener('beforeunload', saveScrollPosition);
 
   // Create container
   const container = document.createElement("div");
@@ -124,6 +170,9 @@ container.appendChild(downButton);
 // Append container to body
 document.body.appendChild(container);
 
+// Restore container position
+restoreContainerPosition(container);
+
 let isDragging = false;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
@@ -154,6 +203,7 @@ function stopDrag() {
   if (!isDragging) return;
   isDragging = false;
   container.style.cursor = "grab";
+  saveContainerPosition(container);
 }
 
 container.addEventListener("mousedown", startDrag);
