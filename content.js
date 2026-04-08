@@ -4,6 +4,38 @@ if (window.__scrollButtonsInjected) {
 } else {
   window.__scrollButtonsInjected = true;
 
+  // Scroll position persistence
+  const STORAGE_KEY = `scroll_pos_${location.pathname}`;
+
+  function saveScrollPosition() {
+    const scrollPos = window.scrollY || window.pageYOffset;
+    localStorage.setItem(STORAGE_KEY, scrollPos.toString());
+  }
+
+  function restoreScrollPosition() {
+    const savedPos = localStorage.getItem(STORAGE_KEY);
+    if (savedPos !== null) {
+      const targetPos = parseInt(savedPos, 10);
+      setTimeout(() => {
+        window.scrollTo(0, targetPos);
+      }, 100);
+    }
+  }
+
+  // Restore position on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', restoreScrollPosition);
+  } else {
+    restoreScrollPosition();
+  }
+
+  // Save position on scroll (debounced)
+  let scrollTimeout;
+  window.addEventListener('scroll', () => {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(saveScrollPosition, 500);
+  });
+
   // Create container
   const container = document.createElement("div");
 container.id = "scroll-buttons-container";
