@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Top Bottom Page Scroll",
+  "version": "1.0",
+  "description": "Floating up and down scroll buttons for all web pages",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
