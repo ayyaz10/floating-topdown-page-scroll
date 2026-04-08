@@ -12,6 +12,27 @@ if (window.__scrollButtonsInjected) {
   // Scroll position persistence
   const STORAGE_KEY_SCROLL = `scroll_pos_${location.pathname}`;
   const STORAGE_KEY_CONTAINER = `container_pos_${location.pathname}`;
+  const STORAGE_KEY_COLORS = `button_colors`;
+
+  // Default colors
+  const DEFAULT_BG_COLOR = 'rgba(0, 0, 0, 0.7)';
+  const DEFAULT_TEXT_COLOR = 'white';
+
+  function getStoredColors() {
+    const stored = localStorage.getItem(STORAGE_KEY_COLORS);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        return { bgColor: DEFAULT_BG_COLOR, textColor: DEFAULT_TEXT_COLOR };
+      }
+    }
+    return { bgColor: DEFAULT_BG_COLOR, textColor: DEFAULT_TEXT_COLOR };
+  }
+
+  function saveColors(bgColor, textColor) {
+    localStorage.setItem(STORAGE_KEY_COLORS, JSON.stringify({ bgColor, textColor }));
+  }
 
   function saveScrollPosition() {
     const scrollPos = window.scrollY || window.pageYOffset;
@@ -22,7 +43,6 @@ if (window.__scrollButtonsInjected) {
     const savedPos = localStorage.getItem(STORAGE_KEY_SCROLL);
     if (savedPos !== null) {
       const targetPos = parseInt(savedPos, 10);
-      // Try multiple times to ensure scroll happens after page fully loads
       setTimeout(() => {
         window.scrollTo(0, targetPos);
       }, 500);
@@ -91,6 +111,9 @@ if (window.__scrollButtonsInjected) {
   // Also save on page unload
   window.addEventListener('beforeunload', saveScrollPosition);
 
+  // Get stored colors
+  const colors = getStoredColors();
+
   // Create container
   const container = document.createElement("div");
 container.id = "scroll-buttons-container";
@@ -110,72 +133,168 @@ container.style.cssText = `
   cursor: grab;
 `;
 
+function createButton(label, onClick) {
+  const button = document.createElement("button");
+  button.innerHTML = label;
+  button.style.cssText = `
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: ${colors.bgColor};
+    color: ${colors.textColor};
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+    pointer-events: auto;
+  `;
+  button.addEventListener("click", onClick);
+  button.addEventListener("mouseenter", () => {
+    button.style.transform = "scale(1.1)";
+    button.style.opacity = "0.9";
+  });
+  button.addEventListener("mouseleave", () => {
+    button.style.transform = "scale(1)";
+    button.style.opacity = "1";
+  });
+  return button;
+}
+
 // Create up button
-const upButton = document.createElement("button");
-upButton.innerHTML = "▲";
-upButton.style.cssText = `
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  border: none;
-  cursor: pointer;
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  transition: all 0.2s ease;
-  pointer-events: auto;
-`;
-upButton.addEventListener("click", () => {
+const upButton = createButton("▲", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
-});
-upButton.addEventListener("mouseenter", () => {
-  upButton.style.transform = "scale(1.1)";
-  upButton.style.opacity = "0.9";
-});
-upButton.addEventListener("mouseleave", () => {
-  upButton.style.transform = "scale(1)";
-  upButton.style.opacity = "1";
 });
 
 // Create down button
-const downButton = document.createElement("button");
-downButton.innerHTML = "▼";
-downButton.style.cssText = `
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  border: none;
-  cursor: pointer;
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  transition: all 0.2s ease;
-  pointer-events: auto;
-`;
-downButton.addEventListener("click", () => {
+const downButton = createButton("▼", () => {
   const maxHeight = getMaxScrollHeight();
   window.scrollTo({ top: maxHeight, behavior: "smooth" });
 });
-downButton.addEventListener("mouseenter", () => {
-  downButton.style.transform = "scale(1.1)";
-  downButton.style.opacity = "0.9";
+
+// Create settings button
+const settingsButton = createButton("⚙", () => {
+  settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
 });
-downButton.addEventListener("mouseleave", () => {
-  downButton.style.transform = "scale(1)";
-  downButton.style.opacity = "1";
+
+// Create settings panel
+const settingsPanel = document.createElement("div");
+settingsPanel.id = "scroll-buttons-settings";
+settingsPanel.style.cssText = `
+  position: absolute;
+  right: 70px;
+  top: 0;
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 15px;
+  display: none;
+  z-index: 10000;
+  min-width: 200px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+`;
+
+const bgColorLabel = document.createElement("label");
+bgColorLabel.style.cssText = `
+  display: block;
+  color: white;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: bold;
+`;
+bgColorLabel.textContent = "Background Color";
+
+const bgColorInput = document.createElement("input");
+bgColorInput.type = "color";
+bgColorInput.value = colors.bgColor.includes('rgba') ? '#000000' : colors.bgColor;
+bgColorInput.style.cssText = `
+  width: 100%;
+  height: 30px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 12px;
+`;
+
+const textColorLabel = document.createElement("label");
+textColorLabel.style.cssText = `
+  display: block;
+  color: white;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: bold;
+`;
+textColorLabel.textContent = "Arrow Color";
+
+const textColorInput = document.createElement("input");
+textColorInput.type = "color";
+textColorInput.value = colors.textColor === 'white' ? '#ffffff' : colors.textColor;
+textColorInput.style.cssText = `
+  width: 100%;
+  height: 30px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 12px;
+`;
+
+const resetButton = document.createElement("button");
+resetButton.textContent = "Reset";
+resetButton.style.cssText = `
+  width: 100%;
+  background: rgba(100, 100, 100, 0.8);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+`;
+resetButton.addEventListener("click", () => {
+  bgColorInput.value = '#000000';
+  textColorInput.value = '#ffffff';
+  updateColors('#000000', '#ffffff');
 });
+resetButton.addEventListener("mouseenter", () => {
+  resetButton.style.background = 'rgba(120, 120, 120, 0.8)';
+});
+resetButton.addEventListener("mouseleave", () => {
+  resetButton.style.background = 'rgba(100, 100, 100, 0.8)';
+});
+
+function updateColors(bgColor, textColor) {
+  const bgRgba = bgColor === '#000000' ? DEFAULT_BG_COLOR : bgColor + 'B3';
+  const buttons = [upButton, downButton, settingsButton];
+  buttons.forEach(btn => {
+    btn.style.background = bgRgba;
+    btn.style.color = textColor;
+  });
+  saveColors(bgRgba, textColor);
+}
+
+bgColorInput.addEventListener("input", (e) => {
+  updateColors(e.target.value, textColorInput.value);
+});
+
+textColorInput.addEventListener("input", (e) => {
+  updateColors(bgColorInput.value, e.target.value);
+});
+
+settingsPanel.appendChild(bgColorLabel);
+settingsPanel.appendChild(bgColorInput);
+settingsPanel.appendChild(textColorLabel);
+settingsPanel.appendChild(textColorInput);
+settingsPanel.appendChild(resetButton);
 
 // Append buttons to container
 container.appendChild(upButton);
 container.appendChild(downButton);
+container.appendChild(settingsButton);
+container.appendChild(settingsPanel);
 
 // Append container to body
 document.body.appendChild(container);
@@ -236,4 +355,11 @@ updateVisibility();
 
 // Listen for scroll events
 window.addEventListener("scroll", updateVisibility);
+
+// Close settings on click outside
+document.addEventListener("click", (e) => {
+  if (!container.contains(e.target)) {
+    settingsPanel.style.display = 'none';
+  }
+});
 }
