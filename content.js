@@ -1,27 +1,39 @@
-// Prevent duplicate injection
-if (window.__scrollButtonsInjected) {
-  // already injected
+// Prevent duplicate injection and ignore iframes.
+if (window.__scrollButtonsInjected || window.top !== window.self) {
+  // already injected or running inside an iframe
 } else {
   window.__scrollButtonsInjected = true;
 
   function initScrollButtons() {
-    // Disable browser's automatic scroll restoration
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }
 
-    // Scroll position persistence
     const STORAGE_KEY_SCROLL = `scroll_pos_${location.pathname}`;
     const STORAGE_KEY_CONTAINER = `container_pos_${location.pathname}`;
-    const STORAGE_KEY_COLORS = `button_colors`;
+    const STORAGE_KEY_COLORS = "button_colors";
 
-    // Default colors
     const DEFAULT_BG_COLOR = "rgba(0, 0, 0, 0.7)";
     const DEFAULT_TEXT_COLOR = "white";
+    const MAX_RESTORE_ATTEMPTS = 3;
+    const RESTORE_RETRY_DELAYS = [150, 400, 900];
 
     let currentBgColor = DEFAULT_BG_COLOR;
     let currentTextColor = DEFAULT_TEXT_COLOR;
     let isDragging = false;
+    let dragMoved = false;
+    let hasUserInteracted = false;
+    let restoreTimer = null;
+    let restoreAttempts = 0;
+    let restoreCompleted = false;
+
+    const savedScrollValue = localStorage.getItem(STORAGE_KEY_SCROLL);
+    const savedScrollTarget = Number.parseInt(savedScrollValue ?? "", 10);
+    const navigationEntry = performance.getEntriesByType("navigation")[0];
+    const navigationType = navigationEntry ? navigationEntry.type : "navigate";
+    const shouldRestoreScroll =
+      Number.isFinite(savedScrollTarget) &&
+      (navigationType === "reload" || navigationType === "back_forward");
 
     function getStoredColors() {
       const stored = localStorage.getItem(STORAGE_KEY_COLORS);
@@ -32,10 +44,11 @@ if (window.__scrollButtonsInjected) {
           currentBgColor = colors.bgColor;
           currentTextColor = colors.textColor;
           return colors;
-        } catch (e) {
+        } catch (error) {
           return { bgColor: DEFAULT_BG_COLOR, textColor: DEFAULT_TEXT_COLOR };
         }
       }
+
       return { bgColor: DEFAULT_BG_COLOR, textColor: DEFAULT_TEXT_COLOR };
     }
 
@@ -53,24 +66,78 @@ if (window.__scrollButtonsInjected) {
       localStorage.setItem(STORAGE_KEY_SCROLL, scrollPos.toString());
     }
 
-    function restoreScrollPosition() {
-      const savedPos = localStorage.getItem(STORAGE_KEY_SCROLL);
-      if (savedPos !== null) {
-        const targetPos = parseInt(savedPos, 10);
-        setTimeout(() => {
-          window.scrollTo(0, targetPos);
-        }, 500);
-        setTimeout(() => {
-          window.scrollTo(0, targetPos);
-        }, 1000);
-        setTimeout(() => {
-          window.scrollTo(0, targetPos);
-        }, 2000);
+    function getMaxScrollHeight() {
+      return Math.max(
+        document.body.scrollHeight,
+        document.documentElement.scrollHeight,
+        document.body.offsetHeight,
+        document.documentElement.offsetHeight,
+      );
+    }
+
+    function getMaxScrollTop() {
+      return Math.max(0, getMaxScrollHeight() - window.innerHeight);
+    }
+
+    function clearScheduledRestore() {
+      if (restoreTimer !== null) {
+        clearTimeout(restoreTimer);
+        restoreTimer = null;
       }
     }
 
+    function cancelScrollRestore() {
+      hasUserInteracted = true;
+      clearScheduledRestore();
+    }
+
+    function restoreScrollPosition() {
+      if (!shouldRestoreScroll || restoreCompleted || hasUserInteracted) {
+        return;
+      }
+
+      const targetPos = Math.min(savedScrollTarget, getMaxScrollTop());
+      const currentPos = window.scrollY || window.pageYOffset;
+
+      if (Math.abs(currentPos - targetPos) <= 2) {
+        restoreCompleted = true;
+        clearScheduledRestore();
+        return;
+      }
+
+      window.scrollTo({ top: targetPos, behavior: "auto" });
+      restoreAttempts += 1;
+
+      const updatedPos = window.scrollY || window.pageYOffset;
+      const reachedTarget = Math.abs(updatedPos - targetPos) <= 2;
+
+      if (reachedTarget || restoreAttempts >= MAX_RESTORE_ATTEMPTS) {
+        restoreCompleted = true;
+        clearScheduledRestore();
+        return;
+      }
+
+      clearScheduledRestore();
+      restoreTimer = window.setTimeout(
+        restoreScrollPosition,
+        RESTORE_RETRY_DELAYS[restoreAttempts] ??
+          RESTORE_RETRY_DELAYS[RESTORE_RETRY_DELAYS.length - 1],
+      );
+    }
+
+    function scheduleInitialScrollRestore() {
+      if (!shouldRestoreScroll || hasUserInteracted || restoreCompleted) {
+        return;
+      }
+
+      clearScheduledRestore();
+      restoreTimer = window.setTimeout(
+        restoreScrollPosition,
+        RESTORE_RETRY_DELAYS[0],
+      );
+    }
+
     function saveContainerPosition(container) {
-      const rect = container.getBoundingClientRect();
       const pos = {
         left: container.style.left,
         top: container.style.top,
@@ -89,53 +156,54 @@ if (window.__scrollButtonsInjected) {
           if (pos.top) container.style.top = pos.top;
           if (pos.right) container.style.right = pos.right;
           if (pos.transform) container.style.transform = pos.transform;
-        } catch (e) {
+        } catch (error) {
           // ignore parsing errors
         }
       }
     }
 
-    function getMaxScrollHeight() {
-      return Math.max(
-        document.body.scrollHeight,
-        document.documentElement.scrollHeight,
-        document.body.offsetHeight,
-        document.documentElement.offsetHeight,
-      );
-    }
-
-    // Restore position on page load
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", restoreScrollPosition);
-      window.addEventListener("load", restoreScrollPosition);
+      document.addEventListener("DOMContentLoaded", scheduleInitialScrollRestore);
+      window.addEventListener("load", scheduleInitialScrollRestore);
     } else if (document.readyState === "interactive") {
-      restoreScrollPosition();
-      window.addEventListener("load", restoreScrollPosition);
+      scheduleInitialScrollRestore();
+      window.addEventListener("load", scheduleInitialScrollRestore);
     } else {
-      restoreScrollPosition();
+      scheduleInitialScrollRestore();
     }
 
-    // Save position on scroll (debounced)
     let scrollTimeout;
-    window.addEventListener("scroll", () => {
-      clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(saveScrollPosition, 300);
+    window.addEventListener(
+      "scroll",
+      () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = window.setTimeout(saveScrollPosition, 300);
+      },
+      { passive: true },
+    );
+
+    window.addEventListener("wheel", cancelScrollRestore, {
+      passive: true,
+      once: true,
+    });
+    window.addEventListener("mousedown", cancelScrollRestore, { once: true });
+    window.addEventListener("touchstart", cancelScrollRestore, {
+      passive: true,
+      once: true,
+    });
+    window.addEventListener("keydown", cancelScrollRestore, { once: true });
+    window.addEventListener("beforeunload", () => {
+      clearScheduledRestore();
+      saveScrollPosition();
     });
 
-    // Also save on page unload
-    window.addEventListener("beforeunload", saveScrollPosition);
-
-    // Get stored colors
     const colors = getStoredColors();
-
-    // Create container
     const container = document.createElement("div");
     container.id = "scroll-buttons-container";
     container.style.cssText = `
       position: fixed;
       right: 20px;
-      top: 50%;
-      transform: translateY(-50%);
+      top: 20px;
       z-index: 9999;
       display: flex;
       flex-direction: column;
@@ -169,13 +237,12 @@ if (window.__scrollButtonsInjected) {
         pointer-events: auto;
       `;
 
-      // Prevent click while dragging
-      button.addEventListener("click", (e) => {
+      button.addEventListener("click", (event) => {
         if (!isDragging && !dragMoved) {
           onClick();
         } else {
-          e.stopImmediatePropagation();
-          e.preventDefault();
+          event.stopImmediatePropagation();
+          event.preventDefault();
         }
       });
 
@@ -185,34 +252,30 @@ if (window.__scrollButtonsInjected) {
           button.style.opacity = "0.9";
         }
       });
+
       button.addEventListener("mouseleave", () => {
         button.style.transform = "scale(1)";
         button.style.opacity = "1";
       });
+
       buttons.push(button);
       return button;
     }
 
-    // Create up button
-    const upButton = createButton("▲", () => {
+    const upButton = createButton("&#9650;", () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
 
-    // Create down button
-    const downButton = createButton("▼", () => {
-      const maxHeight = getMaxScrollHeight();
-      window.scrollTo({ top: maxHeight, behavior: "smooth" });
+    const downButton = createButton("&#9660;", () => {
+      window.scrollTo({ top: getMaxScrollHeight(), behavior: "smooth" });
     });
 
-    // Append buttons to container
     container.appendChild(upButton);
     container.appendChild(downButton);
 
-    // Append container to body
     if (document.body) {
       document.body.appendChild(container);
     } else {
-      // Wait for body
       const bodyWait = setInterval(() => {
         if (document.body) {
           clearInterval(bodyWait);
@@ -221,17 +284,16 @@ if (window.__scrollButtonsInjected) {
       }, 100);
     }
 
-    // Restore container position
     restoreContainerPosition(container);
 
     let dragOffsetX = 0;
     let dragOffsetY = 0;
-    let dragMoved = false;
     let dragStartX = 0;
     let dragStartY = 0;
 
     function startDrag(event) {
       if (event.button !== 0) return;
+
       const rect = container.getBoundingClientRect();
       if (container.style.transform) {
         container.style.transform = "none";
@@ -239,6 +301,7 @@ if (window.__scrollButtonsInjected) {
         container.style.top = `${rect.top}px`;
         container.style.right = "auto";
       }
+
       isDragging = true;
       dragMoved = false;
       dragStartX = event.clientX;
@@ -251,17 +314,20 @@ if (window.__scrollButtonsInjected) {
 
     function drag(event) {
       if (!isDragging) return;
+
       const deltaX = Math.abs(event.clientX - dragStartX);
       const deltaY = Math.abs(event.clientY - dragStartY);
       if (deltaX > 5 || deltaY > 5) {
         dragMoved = true;
       }
+
       container.style.left = `${event.clientX - dragOffsetX}px`;
       container.style.top = `${event.clientY - dragOffsetY}px`;
     }
 
     function stopDrag() {
       if (!isDragging) return;
+
       isDragging = false;
       container.style.cursor = "grab";
       saveContainerPosition(container);
@@ -270,30 +336,20 @@ if (window.__scrollButtonsInjected) {
     container.addEventListener("mousedown", startDrag);
     document.addEventListener("mousemove", drag);
     document.addEventListener("mouseup", stopDrag);
-
     document.addEventListener("mouseleave", stopDrag);
 
-    // Show/hide based on scroll position
     function updateVisibility() {
-      if (window.scrollY > 100) {
-        container.style.opacity = "1";
-      } else {
-        container.style.opacity = "0";
-      }
+      container.style.opacity = window.scrollY > 100 ? "1" : "0";
     }
 
-    // Initial check
     updateVisibility();
+    window.addEventListener("scroll", updateVisibility, { passive: true });
 
-    // Listen for scroll events
-    window.addEventListener("scroll", updateVisibility);
-
-    // Listen for messages from popup
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (request.action === "updateColors") {
-        buttons.forEach((btn) => {
-          btn.style.background = request.bgColor;
-          btn.style.color = request.textColor;
+        buttons.forEach((button) => {
+          button.style.background = request.bgColor;
+          button.style.color = request.textColor;
         });
         saveColors(request.bgColor, request.textColor);
         sendResponse({ success: true });
@@ -301,7 +357,6 @@ if (window.__scrollButtonsInjected) {
     });
   }
 
-  // Wait for DOM to be ready
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initScrollButtons);
   } else {
