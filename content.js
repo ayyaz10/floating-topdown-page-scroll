@@ -205,12 +205,12 @@ if (window.__scrollButtonsInjected || window.top !== window.self) {
       right: 20px;
       top: 20px;
       z-index: 9999;
-      display: flex;
+      display: none;
       flex-direction: column;
       gap: 10px;
       opacity: 0;
       transition: opacity 0.3s ease;
-      pointer-events: auto;
+      pointer-events: none;
       touch-action: none;
       cursor: grab;
     `;
@@ -339,7 +339,10 @@ if (window.__scrollButtonsInjected || window.top !== window.self) {
     document.addEventListener("mouseleave", stopDrag);
 
     function updateVisibility() {
-      container.style.opacity = window.scrollY > 100 ? "1" : "0";
+      const shouldShow = window.scrollY > 100;
+      container.style.display = shouldShow ? "flex" : "none";
+      container.style.opacity = shouldShow ? "1" : "0";
+      container.style.pointerEvents = shouldShow ? "auto" : "none";
     }
 
     updateVisibility();
